@@ -39,6 +39,36 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
+        $this->validate($request,[
+            'name'=>'required',
+            'sku'=>'required',
+            'description'=>'required',
+            'image'=>'image|mimes:png,jpg,jpeg|max:10000'
+         ]);
+
+         $product = new Product();
+
+         $product ->name = $request->input('name');
+         $product ->sku = $request->input('sku');
+         $product ->description = $request->input('description');
+         $product ->image=$request->input('image');
+
+         if($request->hasFile('image')) {
+             $file = Input::file('image');
+             //getting timestamp
+             $timestamp = str_replace([' ', ':'], '-', Carbon::now()->toDateTimeString());
+
+             $name = $timestamp. '-' .$file->getClientOriginalName();
+
+             $product->image = $name;
+
+             $file->move(public_path().'/images/', $name);
+         }
+
+         $product ->save();
+         $product->varient()->sync($request->varient, false);
+         Session::flash('flash_message', 'Service successfully added!');
+         return redirect()->back()->with('success', 'Service Successfully Added');
 
     }
 
@@ -63,7 +93,26 @@ class ProductController extends Controller
     public function edit(Product $product)
     {
         $variants = Variant::all();
-        return view('products.edit', compact('variants'));
+        return view('products.edit', compact('id'));
+
+        $product ->name = $request->input('name');
+        $product ->sku = $request->input('sku');
+        $product ->description = $request->input('description');
+        $product ->image=$request->input('image');
+
+        if($request->has('image')) {
+            $image = $request->file('image');
+            $filename = $image->getClientOriginalName();
+            $image->move(public_path('images/products'), $filename);
+            $product->image = $request->file('image')->getClientOriginalName();
+        }
+
+        $product->update();
+
+        $product->categories()->sync($request->category);
+
+        return redirect()->route('products.index');
+
     }
 
     /**
